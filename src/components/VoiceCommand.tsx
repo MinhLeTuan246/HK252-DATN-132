@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 // ── Types ─────────────────────────────────────────────────────────
 type VoiceEntry = { text: string; ts: string };
 
+// These are the commands that the voice input can trigger. The "guiding_location" and "guiding_route" commands include target information for navigation.
 export type VoiceRobotCommand =
   | 'start_bringup'
   | 'stop_bringup'
