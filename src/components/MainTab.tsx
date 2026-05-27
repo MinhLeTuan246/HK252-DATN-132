@@ -114,6 +114,15 @@ export function MainTab() {
 
     ros.on('error', (e) => { addLog(`Rosbridge error: ${e}`, 'error'); resetModules(); });
     ros.on('close', ()  => { addLog('Disconnected from rosbridge', 'warn'); resetModules(); });
+    // ros.on('error', (e) => {
+    //   addLog(`Rosbridge error: ${e}`, 'error');
+    //   setStatus('Inactive');
+    // });
+
+    // ros.on('close', () => {
+    //   addLog('Disconnected from rosbridge. Robot modules may still be running offline.', 'warn');
+    //   setStatus('Inactive');
+    // });   
 
     const cmdVel = new ROSLIB.Topic({ ros, name: '/cmd_vel', messageType: 'geometry_msgs/Twist' });
     startRobotSrvRef.current    = new ROSLIB.Service({ ros, name: '/start_robot',       serviceType: 'std_srvs/Trigger' });
@@ -196,19 +205,19 @@ export function MainTab() {
     return () => clearInterval(id);
   }, [status]);  
 
-  useEffect(() => {
-    const check = () => {
-      let opened = false;
-      const ws = new WebSocket('ws://172.20.10.2:9090');
-      const markInactive = () => { if (!opened) { setStatus('Inactive'); setRobotStarted(false); } };
-      ws.onopen  = () => { opened = true; setStatus('Active'); ws.close(); };
-      ws.onerror = markInactive;
-      ws.onclose = markInactive;
-    };
-    check();
-    const id = setInterval(check, 5000);
-    return () => clearInterval(id);
-  }, []);
+  // useEffect(() => {
+  //   const check = () => {
+  //     let opened = false;
+  //     const ws = new WebSocket('ws://172.20.10.2:9090');
+  //     const markInactive = () => { if (!opened) { setStatus('Inactive'); setRobotStarted(false); } };
+  //     ws.onopen  = () => { opened = true; setStatus('Active'); ws.close(); };
+  //     ws.onerror = markInactive;
+  //     ws.onclose = markInactive;
+  //   };
+  //   check();
+  //   const id = setInterval(check, 5000);
+  //   return () => clearInterval(id);
+  // }, []);
 
   const callTrigger = (srv: ROSLIB.Service<any, any>) =>
     new Promise<any>((resolve) => srv.callService({} as any, resolve));
@@ -558,6 +567,7 @@ export function MainTab() {
             <div style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <VoiceCommandPanel 
                 disabled={status !== 'Active'}
+                testMode={false}
                 onCommand={handleVoiceCommand}
               />
             </div>

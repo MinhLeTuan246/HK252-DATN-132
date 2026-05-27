@@ -38,6 +38,7 @@ type InterpretedCommand = {
 
 interface VoiceCommandPanelProps {
   disabled?: boolean;
+  testMode?: boolean;
   onCommand?: (
     command: VoiceRobotCommand,
     rawText: string,
@@ -217,7 +218,7 @@ function interpret(raw: string): InterpretedCommand {
   if (/\bforward\b|\bahead\b/.test(s)) {
     return { command: 'motion_forward', label: 'Motion: forward' };
   }
-  if (/\bbackward\b|\breverse\b|\bback\b/.test(s)) {
+  if (/\bbackward\b|\breverse\b|\bback\b|\bbackwards\b/.test(s)) {
     return { command: 'motion_backward', label: 'Motion: backward' };
   }
   if (/\bleft\b/.test(s)) {
@@ -340,7 +341,7 @@ function MiniLog({
 }
 
 // ── VoiceCommandPanel ─────────────────────────────────────────────
-export function VoiceCommandPanel({ disabled = false, onCommand }: VoiceCommandPanelProps) {
+export function VoiceCommandPanel({ disabled = false, testMode = false, onCommand }: VoiceCommandPanelProps) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState<VoiceEntry[]>([]);
   const [interpreted, setInterpreted] = useState<VoiceEntry[]>([]);
@@ -380,12 +381,24 @@ export function VoiceCommandPanel({ disabled = false, onCommand }: VoiceCommandP
     recognitionRef.current = null;
 
     const rec = new SR();
-    rec.continuous = false;
-    rec.interimResults = false;
+    rec.continuous = true;
+    rec.interimResults = true;
     rec.lang = 'en-US';
 
     rec.onresult = (e: any) => {
-      const raw = (e.results[0][0].transcript as string).trim();
+      let finalText = '';
+
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const text = e.results[i][0].transcript.trim();
+
+        if (e.results[i].isFinal) {
+          finalText += ' ' + text;
+        }
+      }
+
+      const raw = finalText.trim();
+      if (!raw) return;
+
       const ts = nowStr();
       const parsed = interpret(raw);
 
@@ -393,7 +406,14 @@ export function VoiceCommandPanel({ disabled = false, onCommand }: VoiceCommandP
       setInterpreted(p => [...p.slice(-19), { text: parsed.label, ts }]);
 
       if (parsed.command !== 'unknown') {
-        onCommand?.(parsed.command, raw, parsed.target, parsed.targets, parsed.optimize);
+        if (testMode) {
+          setInterpreted(p => [
+            ...p.slice(-19),
+            { text: `[TEST ONLY - NOT EXECUTED] ${parsed.label}`, ts }
+          ]);
+        } else {
+          onCommand?.(parsed.command, raw, parsed.target, parsed.targets, parsed.optimize);
+        }
       }
     };
 
